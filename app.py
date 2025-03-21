@@ -29,18 +29,45 @@ Please provide the summary of the text given here: """
 
 
 #  getting the transcript data from yt videos
-def extract_transcript_details(youtube_video_url):
+import time
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import YouTubeRequestFailed
+
+def extract_transcript_details(video_url, max_retries=5, delay=2):
     try:
-        video_id = youtube_video_url.split("=")[1]
-        transcript_text = YouTubeTranscriptApi.get_transcript(video_id)
-        
-        transcript = ""
-        for i in transcript_text:
-            transcript += " " + i['text']
-        return transcript
+        # Extract video ID from the URL
+        video_id = video_url.split("v=")[-1]
+
+        retries = 0
+        while retries < max_retries:
+            try:
+                # Attempt to fetch the transcript
+                transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                transcript_text = " ".join([item["text"] for item in transcript])
+                return transcript_text
+            except YouTubeRequestFailed:
+                retries += 1
+                print(f"Retrying... ({retries}/{max_retries})")
+                time.sleep(delay)
+
+        raise Exception("Transcript could not be retrieved after multiple attempts.")
     
     except Exception as e:
-        raise e
+        print(f"Error: {e}")
+        return None
+
+# def extract_transcript_details(youtube_video_url):
+#     try:
+#         video_id = youtube_video_url.split("=")[1]
+#         transcript_text = YouTubeTranscriptApi.get_transcript(video_id)
+        
+#         transcript = ""
+#         for i in transcript_text:
+#             transcript += " " + i['text']
+#         return transcript
+    
+#     except Exception as e:
+#         raise e
         
 # getting summary based on prompt from google gemini pro     
 def generate_gemini_content(transcript_text, prompt):
